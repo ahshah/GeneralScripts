@@ -37,7 +37,7 @@ do
    #kecho "Read array val $k"
    OUTPUT_FILE=${args_file_out[$k]}
    START_TIME=${args_start_time[$k]}
-   echo "Cutting file $INPUT_FILE to  $OUTPUT starting at $START_TIME"
+   echo "Cutting file $INPUT_FILE to  $OUTPUT_FILE starting at $START_TIME"
    ffmpeg -loglevel warning -ss $START_TIME -i $INPUT_FILE -c copy -t $END_DURATION $OUTPUT_FILE
 done
 

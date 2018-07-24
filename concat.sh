@@ -20,6 +20,16 @@ if [[ $OUT_PATH == "" ]]; then
     exit
 fi
 
+if [[ ! -e $OUT_PATH ]]; then
+    echo "Output directory does not exist: $OUT_PATH attempting to make.."
+    mkdir -p "$OUT_PATH"
+fi;
+
+if [[ ! -e $OUT_PATH ]]; then
+    echo "Output directory does not exist: $OUT_PATH failed to make.."
+    exit
+fi;
+
 if [[ ! -d $OUT_PATH ]]; then
     echo "Output directory is invalid: $OUT_PATH is not a directory"
     exit
@@ -28,7 +38,7 @@ fi
 
 if [[ $OUTPUT_FN == "" ]]; then
     echo "Missing output file parameter.. taking a guess"
-    OUTPUT_FN=$(ls $IN_PATH | sort | head -1)
+    OUTPUT_FN=$(ls "$IN_PATH" | sort | head -1)
     OUTPUT_FN=$(basename $OUTPUT_FN .mp4)_full.mp4
     echo "Determined output to be: $OUTPUT_FN"
 fi
@@ -44,9 +54,9 @@ echo "OUTPUT: $OUTPUT_FILE_PATH"
 TMP=$(mktemp)
 echo "Tmp file is $TMP:"
 i=0;
-for file in $(ls $IN_PATH | grep mp4 | sort)
+for file in $(ls "$IN_PATH" | grep mp4 | sort)
 do
-    file=$(realpath $IN_PATH/$file)
+    file=$(realpath "$IN_PATH"/$file)
     if [[ ! -f $file ]];
     then
         echo "Skipping $file"
@@ -57,4 +67,4 @@ do
     ((i++))
 done
 
-ffmpeg -f concat -safe 0 -i $TMP -c copy $OUTPUT_FILE_PATH
+ffmpeg -f concat -safe 0 -i $TMP -c copy "$OUTPUT_FILE_PATH"
