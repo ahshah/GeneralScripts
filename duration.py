@@ -1,9 +1,8 @@
+#!/usr/bin/env python
 import  datetime
 import fileinput
 
-
 def main():
-    print "Hello world"
     for line in fileinput.input():
         start = line.split()[0]
         end = line.split()[1]
