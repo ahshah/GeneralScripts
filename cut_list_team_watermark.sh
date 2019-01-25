@@ -3,11 +3,13 @@
 
 INPUT_FILE=$1
 INPUT_LIST=$2
-END_TIME_DEFAULT=00:02:35.0 
+END_TIME_DEFAULT=00:02:35.0
+SKIP_CUTTING=$(echo $3 | tr '[:upper:]' '[:lower:]')
+SKIP_WATERMARKING=$(echo $4 | tr '[:upper:]' '[:lower:]')
 
 if [[ $INPUT_FILE == "" || $INPUT_LIST == "" ]];
 then
-   echo "Usage: $0 <input_file> <cut index>"
+   echo "Usage: $0 <input_file> <cut index> <skip cutting> <skip watermarking>"
    echo ""
    echo "Cut index format: "
    echo "<start time> <team name> <watermark> <length of cut (optional)>"
@@ -55,10 +57,20 @@ do
    START_TIME=${args_start_time[$k]}
    LENGTH=${args_end_time[$k]}
 
-   echo "Cutting file $INPUT_FILE to $OUTPUT_FILE starting at $START_TIME with duration $LENGTH"
-   echo "command:  ffmpeg -loglevel warning -ss $START_TIME -i $INPUT_FILE -c copy -t $LENGTH $OUTPUT_FILE"
-   ffmpeg -loglevel warning -ss $START_TIME -i $INPUT_FILE -c copy -t $LENGTH $OUTPUT_FILE
+    if [[ $SKIP_CUTTING == "y" ]]
+    then
+        echo "Skip cutting of files.."
+    else
+        echo "Cutting file $INPUT_FILE to $OUTPUT_FILE starting at $START_TIME with duration $LENGTH"
+        echo "command:  ffmpeg -loglevel warning -ss $START_TIME -i $INPUT_FILE -c copy -t $LENGTH $OUTPUT_FILE"
+        ffmpeg -loglevel warning -ss $START_TIME -i $INPUT_FILE -c copy -t $LENGTH $OUTPUT_FILE
+    fi
 done
+
+if [[ $SKIP_WATERMARKING == "y" ]]
+then
+    exit;
+fi
 
 for i in "${!args_file_out[@]}"
 do
@@ -68,4 +80,3 @@ do
    WATERMARK=$(echo "$WATERMARK" | sed 's/_/ /g')
    ~/.bin/GeneralScripts/watermark.sh $INPUT_FILE $WMARK_OUTPUT_FILE "$WATERMARK"
 done
-
