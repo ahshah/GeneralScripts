@@ -1,0 +1,9 @@
+#!/bin/bash
+echo "Read this script first, no audio in result"
+
+#First step - extract video to raw bitstream
+#    ffmpeg -y -i seeing_noaudio.mp4 -c copy -f h264 seeing_noaudio.h264
+
+#Remux with new framerate
+#    ffmpeg -y -r 24 -i seeing_noaudio.h264 -c copy seeing.mp4
+
