@@ -30,6 +30,7 @@ do
     continue; 
   fi
 
+  ISO=""
   case $FILE in
   MA[FH]*) 
     echo "Here"
@@ -45,7 +46,14 @@ do
     DATE_TIME=$(echo $DATE_TIME | sed 's/-[0-9][0-9]:.*$/ /g')
     DATE_TIME=$(echo $DATE_TIME | sed 's/-/\:/g')
     DATE_TIME=$(echo $DATE_TIME | sed 's/T/ /g')
-    echo "Got time: $DATE_TIME"
+    ISO="UNKNOWN_ISO"
+    HEX=$(xxd -p -s 401 -l 4 "$FILE" | sed 's/ //g' | awk 'BEGIN {FS =":"}; {print toupper($1)}' ); 
+    ISO=$(echo "ibase=16; $HEX"|bc)
+    if [[ $ISO == ""  ]]
+    then
+        ISO="UNKNOWN_ISO"
+    fi
+    echo "Got time: $DATE_TIME, ISO:$ISO"
     ;;
   *)
     continue
@@ -55,12 +63,14 @@ do
     DATE=$(echo $DATE_TIME | awk '{print $1}' | sed 's/:/\./g' | cut -c3-)
     TIME=$(echo $DATE_TIME | awk '{print $2}' | sed 's/://g' | sed 's/-.*//g') 
 
+    NAME=$(echo $DATE"_"$TIME.mp4)
+    if [[ $ISO != "" ]];
+    then
+        NAME=$(echo $DATE"_"$TIME"_"$ISO.mp4)
+    fi
 
+    if [[ -e $NAME ]]; then echo "Skipping rename from $FILE to $NAME, duplciate found"; continue; fi
 
-
-  NAME=$(echo $DATE"_"$TIME.mp4)
-  if [[ -e $NAME ]]; then echo "Skipping rename from $FILE to $NAME, duplciate found"; continue; fi
-  
-  echo "Going to move $FILE to $NAME"
-  mv "$FILE" "$NAME"
+    echo "Going to move $FILE to $NAME"
+    mv "$FILE" "$NAME"
 done
