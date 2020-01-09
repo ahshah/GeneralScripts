@@ -1,0 +1,10 @@
+#!/bin/bash
+PRODUCT=$1
+CORE_VERSION=$2
+if [[ $CORE_VERSION -eq "" ]]
+then
+    echo "Usage: $0 <product> <core version> to retrieve  //projects/shared/<product>-<core version>/versions/ff-latest.xml";
+    echo "Example products: sky, aea"
+    exit 1;
+fi
+p4 print -q //projects/shared/core-$PRODUCT-$CORE_VERSION/versions/ff-latest.xml

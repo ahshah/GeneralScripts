@@ -1,0 +1,171 @@
+#!/usr/bin/perl
+# vimdiff < (p4 print -q //projects/btf/appme_mod_aps-1.1/akamai/appme_mod_aps/src/mod_aps.cpp#{45,46})
+use File::Temp;
+use Scalar::Util 'looks_like_number';
+use Getopt::Long;
+
+my $file_path = $ARGV[0];
+my $rev1      = $ARGV[1];
+my $rev2      = $ARGV[2];
+
+my $cr = undef;
+sub usage {
+    print "Usage: \n";
+    print "\t$0 <file_path or p4 path> <rev1> <rev2>\n";
+    print "\t$0 <file_path#rev2>\n";
+    print "\t$0 <Change list number>\n";
+    print "\t$0 --cr <CR Number>\n";
+    exit 1;
+}
+
+sub init 
+{
+    $result = GetOptions ("cr=i" => \$cr);
+    unless ($result) {
+        usage();
+    }
+    unless ($cr) {
+        return;
+    }
+    my $changelist = `p4cr --output-cr $cr | grep ak_perforce_changenumber`;
+    $changelist =~ s/\s+<ak_perforce_changenumber>//;
+    $changelist =~ s/<\/ak_perforce_changenumber>//;
+    chomp($changelist);
+    my @CR_LIST = split(/, /,$changelist);
+    my %CT_TBL;
+    my $i = 0;
+    foreach my $CR (@CR_LIST) {
+#    print "Processing $CR\n";
+        my $description = `p4 describe -s $CR | sed -n 3,7p`;
+        chomp($description);
+        $description =~ s/\t\n/\t\t/g;
+        $description = (split(/Affected files \.\.\./, $description))[0];
+        printf "[%5d] %6d %s\n\n", $i, $CR, $description;
+        $i++;
+    }
+
+    while (1) 
+    {
+        print "Select CR to diff: ";
+        $userinput = <STDIN>;
+        chomp($userinput);
+        if (looks_like_number($userinput) &$ userinput >= 0  && $userinput < $i)  {
+            last;
+        }
+    }
+    my $CR = $CR_LIST[$userinput];
+    print "Selected CR $CR\n";
+    $file_path = $CR;
+    $rev1 = undef;
+    $rev2 = undef;
+#    exit 0;
+}
+
+init();
+
+if ($#ARGV+1 != 2 && $#ARGV+1 != 1 && $cr == undef)
+{
+    if (!looks_like_number($rev1))
+    {
+        print "Revision 1 is not a number: '$rev1'\n";
+        usage();
+    }
+    elsif  (!looks_like_number($rev2))
+    {
+        print "Revision 2 is not a number: $rev2\n";
+        usage();
+    }
+    elsif (looks_like_number($file_path))
+    {
+        print "Invalid file path: is a number: $file_path\n";
+        usage();
+    }
+
+}
+
+if (($#ARGV+1 == 1 || $cr != undef) && looks_like_number($file_path)) 
+{
+    my $changelist_num = $file_path;
+    my $description = `p4 describe -s $changelist_num`;
+    my @description_files = split(/Affected files ...\n/, $description);
+    print "Description:\n" . $description_files[0];
+    my @files = split(/\n/,$description_files[1]);
+    @files = grep (!/^\s*$/, @files);
+    my $num = 0;
+
+    my $max_str_len = 0;
+    foreach my $file (@files) {
+        @file_split = split(/\s/, $file);
+        my $str_len = length($file_split[1]);
+        if ($max_str_len < $str_len) {
+            $max_str_len = $str_len;
+        }
+    }
+
+    foreach my $file (@files) {
+        @file_split = split(/\s/, $file);
+        $file =~s/... //;
+        printf "[%5d] %-${max_str_len}s [%5d]\n", $num, $file_split[1], $num;
+        $files[$num] = $file_split[1]; # Remove the '... ' and place back in the array
+        $num++;
+    }
+
+    if ($num == 1) {
+        $file_path = $files[0];
+    }
+    else 
+    {
+        my $loop = 1;
+        my $userinput = 0;
+        while (1) {
+            print "Select file to diff: ";
+            $userinput = <STDIN>;
+            chomp($userinput);
+            if (looks_like_number($userinput) &$ userinput >= 0  && $userinput < $num)  {
+                last;
+            }
+        }
+        $file_path = $files[$userinput];
+    }
+    print "Selected $file_path\n";
+}
+
+if ($#ARGV+1 == 1 || $cr != undef)
+{
+    my @path_and_rev = split(/#/, $file_path);
+    $file_path = $path_and_rev[0];
+    $rev2      = $path_and_rev[1];
+    if (!looks_like_number($rev2) || $rev2 < 1)
+    {
+        usage();
+    }
+    $rev1 = $rev2 - 1;
+}
+
+$dir = File::Temp->newdir();
+
+my @splitname = split(/\//,$file_path);
+my $name = $splitname[$#splitname];
+
+my $fileRev1 = $file_path ."#$rev1";
+my $fileRev2 = $file_path ."#$rev2";
+
+my $rev1_path = $dir . "/" . $rev1 . "." . $name;
+my $rev2_path = $dir . "/" . $rev2 . "." . $name;
+my $P4DIFF    = $ENV{P4DIFF};
+if ($P4DIFF) {
+    $P4DIFF = "nvim";
+}
+
+print "File path : $file_path\n";
+print "File name : $name\n";
+print "Repo rev1 : $fileRev1\n";
+print "Repo rev2 : $fileRev2\n";
+print "rev1      : $rev1_path\n";
+print "rev2      : $rev2_path\n";
+print "P4DIFF    : $P4DIFF\n";
+
+`p4 print -q $fileRev1 > $rev1_path`;
+`p4 print -q $fileRev2 > $rev2_path`;
+system("$P4DIFF", "-d", "$rev1_path", "$rev2_path");
+
