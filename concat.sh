@@ -5,6 +5,12 @@
 INPUT_PATH=$1
 OUTPUT_PATH=$2
 OUTPUT_FN=$3
+REALPATH_LOC=$(which realpath)
+if [[ $REALPATH_LOC == "" ]];
+then
+    echo "Missing realpath binary, install it (via coreutils) before using this script"
+    exit
+fi
 
 IN_PATH=$(realpath $INPUT_PATH 2>/dev/null)
 if [[ $IN_PATH == "" ]]; then
